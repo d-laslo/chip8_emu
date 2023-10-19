@@ -1,6 +1,8 @@
 mod fonts;
 mod parameters;
 use log::{debug, error};
+use std::fs::File;
+use std::io::prelude::*;
 use rand::Rng;
 // http://devernay.free.fr/hacks/chip8/C8TECH10.HTM
 pub struct Chip8Cpu {
@@ -9,7 +11,10 @@ pub struct Chip8Cpu {
     i: u16,
     delay_timer: u8,
     sound_timer: u8,
+    super_chip_mode: bool,
+    stop: bool,
     v: [u8; parameters::REGISTERS_COUNT],
+    flags: [u8; parameters::REGISTERS_COUNT],
     stack: [u16; parameters::STACK_SIZE],
     memory: [u8; parameters::MEMORY_SIZE],
     screen: [[u8; parameters::SCREEN_HEIGH]; parameters::SCREEN_WIDTH],
@@ -24,7 +29,10 @@ impl Chip8Cpu{
             i: 0,
             delay_timer: 0,
             sound_timer: 0,
+            super_chip_mode: false,
+            stop: false,
             v: [0; parameters::REGISTERS_COUNT], 
+            flags: [0; parameters::REGISTERS_COUNT], 
             stack: [0; parameters::STACK_SIZE], 
             memory: [0; parameters::MEMORY_SIZE],
             screen: [[0; parameters::SCREEN_HEIGH]; parameters::SCREEN_WIDTH],
@@ -42,7 +50,10 @@ impl Chip8Cpu {
         self.i = 0;
         self.delay_timer = 0;
         self.sound_timer = 0;
+        self.super_chip_mode = false;
+        self.stop = false;
         self.v = [0; parameters::REGISTERS_COUNT];
+        self.flags = [0; parameters::REGISTERS_COUNT];
         self.stack = [0; parameters::STACK_SIZE];
         self.memory = [0; parameters::MEMORY_SIZE];
         self.screen = [[0; parameters::SCREEN_HEIGH]; parameters::SCREEN_WIDTH];
@@ -67,11 +78,50 @@ impl Chip8Cpu
         
         match opcode & 0xF000 {
             0x0000 => {
+                // 00Cn - SCD nibble
+                if (opcode & 0x00F0) == 0xC0 {
+                    let n = (opcode & 0x000F) as usize;                    
+                    for y in (parameters::SCREEN_HEIGH - 1)..=n {
+                        for x in 0..parameters::SCREEN_WIDTH {
+                            self.screen[x][y] = self.screen[x][y - n];
+                        }
+                    }
+                    for y in 0..n {
+                        for x in 0..parameters::SCREEN_WIDTH {
+                            self.screen[x][y] = 0;
+                        }
+                    }
+                    return;
+                }
                 match opcode & 0x0FFF {
                     // 00E0 - CLS
                     0x00E0 => self.screen = [[0; parameters::SCREEN_HEIGH]; parameters::SCREEN_WIDTH],
                     // 00EE - RET
                     0x00EE => {self.sp -= 1; self.pc = self.stack[self.sp as usize];},
+                    // 00FB - SCR
+                    0x00FB => {
+                        for x in (parameters::SCREEN_WIDTH - 1)..=4 {
+                            self.screen[x] = self.screen[x - 4];
+                        }
+                        for x in 0..4 {
+                            self.screen[x] = [0; parameters::SCREEN_HEIGH];
+                        }
+                    },
+                    // 00FC - SCL
+                    0x00FC => {
+                        for x in 0..(parameters::SCREEN_WIDTH - 4) {
+                            self.screen[x] = self.screen[x + 4];
+                        }
+                        for x in (parameters::SCREEN_WIDTH - 4)..parameters::SCREEN_WIDTH {
+                            self.screen[x] = [0; parameters::SCREEN_HEIGH];
+                        }
+                    },
+                    // 00FD - EXIT
+                    0x00FD => self.stop = true,
+                    // 00FE - LOW
+                    0x00FE => self.super_chip_mode = false,
+                    // 00FF - HIGH
+                    0x00FF => self.super_chip_mode = true,
                     // 0nnn - SYS addr
                     _=> self.pc = opcode & 0x0FFF,
                 }
@@ -187,6 +237,8 @@ impl Chip8Cpu
                     0x1E => self.i += self.v[(opcode & 0x0F00) as usize >> 8] as u16,
                     // Fx29 - LD F, Vx 
                     0x29 => self.i = self.v[(opcode & 0x0F00) as usize >> 8] as u16 * 5,
+                    // Fx30 - LD HF, Vx
+                    0x30 => self.i = self.v[(opcode & 0x0F00) as usize >> 8] as u16 * 10 + 80,
                     // Fx33 - LD B, Vx
                     0x33 => {
                         let mut t = self.v[(opcode & 0x0F00) as usize >> 8];
@@ -196,8 +248,8 @@ impl Chip8Cpu
                     }
                     // Fx55 - LD [I], Vx
                     0x55 => {
-                        for i in 0..=((opcode & 0x0F00) >> 8) {
-                            self.memory[self.i as usize + i as usize] = self.v[i as usize];
+                        for i in 0..=((opcode & 0x0F00) >> 8) as usize {
+                            self.memory[self.i as usize + i] = self.v[i];
                         }
                     }
                     // Fx65 - LD Vx, [I]
@@ -206,6 +258,10 @@ impl Chip8Cpu
                             self.v[i as usize] = self.memory[self.i as usize + i as usize];
                         }
                     }
+                    // Fx75 - LD R, Vx
+                    0x75 => self.flags = self.v.clone(),
+                    // Fx85 - LD Vx, R
+                    0x85 => self.v = self.flags.clone(),
                     _=> error!(""),
                 }
             }
@@ -221,5 +277,13 @@ impl Chip8Cpu
     fn draw_sprite(&mut self, x : u8, y : u8, num : u8)
     {
         error!("TODO: Draw sprite");
+    }
+}
+
+impl Chip8Cpu
+{
+    pub fn load_game(path: String)
+    {
+        // let mut file = File::open("foo.txt")?;
     }
 }
