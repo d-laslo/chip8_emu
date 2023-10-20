@@ -70,7 +70,7 @@ fn main() {
     let sdl_context: sdl2::Sdl = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let mut cpu = chip8::Chip8Cpu::new();
-    cpu.load_game("".to_string());
+    cpu.load_game("/home/sovun/projects/chip8_emu/chip8_emu_rust/src/test_opcode.ch8".to_string());
 
 
     let window = video_subsystem.window("CHIP_EMU", 1024, 512)
