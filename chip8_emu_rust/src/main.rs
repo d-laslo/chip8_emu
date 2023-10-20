@@ -3,10 +3,16 @@ mod chip8;
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use std::time::Duration;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 use sdl2::rect::Rect;
+
+use chrono::Local;
+
+fn get_timestamp() -> i64
+{
+    Local::now().timestamp_millis()
+}
 
 fn draw(canvas: &mut Canvas<Window>, cpu: &chip8::Chip8Cpu)
 {
@@ -17,7 +23,6 @@ fn draw(canvas: &mut Canvas<Window>, cpu: &chip8::Chip8Cpu)
             }
         }
     } 
-    //canvas.fill_rect(rect)
 }
 
 fn handle_key_up( keycode : &Keycode, cpu: &mut chip8::Chip8Cpu)
@@ -67,25 +72,28 @@ fn handle_key_down( keycode : &Keycode, cpu: &mut chip8::Chip8Cpu)
 }
 
 fn main() {
-    let sdl_context: sdl2::Sdl = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
     let mut cpu = chip8::Chip8Cpu::new();
     cpu.load_game("/home/sovun/projects/chip8_emu/chip8_emu_rust/src/test_opcode.ch8".to_string());
 
-
+    let sdl_context: sdl2::Sdl = sdl2::init().unwrap();
+    let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem.window("CHIP_EMU", 1024, 512)
         .position_centered()
         .build()
         .unwrap();
 
     let mut canvas: sdl2::render::Canvas<sdl2::video::Window> = window.into_canvas().build().unwrap();
-
     canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
+
+
+    let mut last_tick = get_timestamp();
+
+    let mut cycles_per_second = 0;
+    let mut opcode_count = 0;
     'running: loop {
-        //canvas.clear();
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit {..} => break 'running,
@@ -94,13 +102,27 @@ fn main() {
                 _ => {}
             }
         }
-        // The rest of the game loop goes here...
-        cpu.execute_opcode();
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        draw(&mut canvas, &cpu);
-        
+        if cpu.stop {break 'running;}
 
-        canvas.present();
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 60));
+        
+        if cpu.super_chip_mode { cycles_per_second = 30;}
+        else { cycles_per_second = 10; }
+
+        if opcode_count < cycles_per_second
+        {
+            cpu.execute_opcode();
+            opcode_count += 1;
+        }
+
+        if get_timestamp() - last_tick >= 1000/60 {
+            cpu.decrease_timers();
+            last_tick = get_timestamp();
+
+            canvas.set_draw_color(Color::RGB(0, 0, 0));
+            draw(&mut canvas, &cpu);
+            canvas.present();
+
+            opcode_count = 0;
+        }
     }
 }

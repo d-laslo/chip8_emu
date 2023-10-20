@@ -11,8 +11,8 @@ pub struct Chip8Cpu {
     i: u16,
     delay_timer: u8,
     sound_timer: u8,
-    super_chip_mode: bool,
-    stop: bool,
+    pub super_chip_mode: bool,
+    pub stop: bool,
     v: [u8; parameters::REGISTERS_COUNT],
     flags: [u8; parameters::REGISTERS_COUNT],
     stack: [u16; parameters::STACK_SIZE],
@@ -24,7 +24,7 @@ pub struct Chip8Cpu {
 impl Chip8Cpu{
     pub fn new() -> Self {
         let mut cpu = Chip8Cpu{
-            pc: 0, 
+            pc: parameters::START_PC, 
             sp: 0, 
             i: 0,
             delay_timer: 0,
@@ -38,14 +38,21 @@ impl Chip8Cpu{
             screen: [[0; parameters::SCREEN_HEIGH]; parameters::SCREEN_WIDTH],
             key: [false; parameters::KEYS_COUNT],
         };
-        cpu.init();
+        let s = fonts::SMALL.len();
+        for i in 0..s {
+            cpu.memory[i] = fonts::SMALL[i];
+        }
+        for i in 0..fonts::BIG.len() {
+            cpu.memory[i + s] = fonts::BIG[i];
+        }
         cpu
     }
 }
 
 impl Chip8Cpu {
+    #![allow(dead_code)]
     pub fn init(&mut self) {
-        self.pc = 0x200;
+        self.pc = parameters::START_PC;
         self.sp = 0;
         self.i = 0;
         self.delay_timer = 0;
@@ -198,7 +205,7 @@ impl Chip8Cpu
                         {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
                         self.v[(opcode & 0x0F00) as usize >> 0x8] <<= 1;
                     }
-                    _=> error!(""),
+                    _=> error!("PC: {:X} Opcode:{:X}", self.pc, opcode),
                 }
             },
             // 9xy0 - SNE Vx, Vy
@@ -220,7 +227,7 @@ impl Chip8Cpu
                     0x9E => if self.key[self.v[(opcode & 0x0F00) as usize >> 8] as usize] {self.pc += 2;},
                     // ExA1 - SKNP Vx
                     0xA1 => if !self.key[self.v[(opcode & 0x0F00) as usize >> 8] as usize] {self.pc += 2;},
-                    _=> error!(""),
+                    _=> error!("PC: {:X} Opcode:{:X}", self.pc, opcode),
                 }
             }
             0xF000 => {
@@ -268,13 +275,11 @@ impl Chip8Cpu
                     0x75 => self.flags = self.v.clone(),
                     // Fx85 - LD Vx, R
                     0x85 => self.v = self.flags.clone(),
-                    _=> error!(""),
+                    _=> error!("PC: {:X} Opcode:{:X}", self.pc, opcode),
                 }
             }
-
-            _=> error!(""),
+            _=> error!("PC: {:X} Opcode:{:X}", self.pc, opcode),
         }
-
     }
 }
 
