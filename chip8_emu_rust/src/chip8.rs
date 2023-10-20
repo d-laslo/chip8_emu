@@ -71,10 +71,12 @@ impl Chip8Cpu {
 
 impl Chip8Cpu
 {
+    #![allow(dead_code)]
     fn execute_opcode(&mut self)
     {
         let opcode : u16 = ((self.memory[self.pc as usize] as u16) << 8) ^ self.memory[(self.pc + 1) as usize] as u16;
         self.pc += 2;
+        debug!("PC: {:X} Opcode:{:X}", self.pc, opcode);
         
         match opcode & 0xF000 {
             0x0000 => {
@@ -205,9 +207,9 @@ impl Chip8Cpu
             0xC000 => self.v[(opcode & 0x0F00) as usize >> 8] = rand::thread_rng().gen::<u8>() & (opcode & 0x00FF) as u8,
             // Dxyn - DRW Vx, Vy, nibble
             0xD000 => self.draw_sprite(
-                (opcode & 0x0F00) as u8 >> 8, 
-                (opcode & 0x00F0) as u8 >> 4, 
-                (opcode & 0x000F) as u8),
+                ((opcode & 0x0F00) >> 8) as usize, 
+                ((opcode & 0x0F00) >> 4) as usize, 
+                (opcode & 0x000F) as usize),
             0xE000 => {
                 match opcode & 0x00FF {
                     // Ex9E - SKP Vx
@@ -274,16 +276,98 @@ impl Chip8Cpu
 
 impl Chip8Cpu
 {
-    fn draw_sprite(&mut self, x : u8, y : u8, num : u8)
+    #![allow(dead_code)]
+    fn draw_sprite(&mut self, x : usize, y : usize, mut num : usize)
     {
-        error!("TODO: Draw sprite");
+        self.v[0xF] = 0;
+        match self.super_chip_mode {
+            // chip8 mode
+            false => {
+                if num == 0 {num = 16}
+                for yline in 0..num as usize {
+                    let data = self.memory[self.i as usize + yline];
+                    for xpix in 0..8 {
+                        if data & (0x80 >> xpix) != 0 {
+                            if (self.v[x] as usize + xpix < 64) 
+                                && (self.v[y] as usize + yline < 32) 
+                                && (self.v[x] as i8 + xpix as i8 >= 0) 
+                                && (self.v[y] as i8 + yline as i8 >= 0) {
+                                if self.screen[(self.v[x] as usize + xpix) * 2][(self.v[y] as usize + yline) * 2] == 1 {self.v[0xF] = 1;}
+                                self.screen[(self.v[x] as usize + xpix) * 2][(self.v[y] as usize + yline) * 2] ^= 1;
+                                self.screen[(self.v[x] as usize + xpix) * 2 + 1][(self.v[y] as usize + yline) * 2] ^= 1;
+                                self.screen[(self.v[x] as usize + xpix) * 2][(self.v[y] as usize + yline) * 2 + 1] ^= 1;
+                                self.screen[(self.v[x] as usize + xpix) * 2 + 1][(self.v[y] as usize + yline) * 2 + 1] ^= 1;
+                            }
+                        }
+                    }
+                }
+            },
+            // super chip mode
+            true => {
+                if num == 0{
+                    for yline in 0..16 {
+                        let data = self.memory[self.i as usize + yline * 2];
+                        for xpix in 0..8 {
+                            if data & (0x80 >> xpix) != 0 {
+                                if (self.v[x] as usize + xpix) < 128 
+                                    && (self.v[y] as usize + yline) < 64 
+                                    && (self.v[x] as i8 + xpix as i8) >= 0 
+                                    && (self.v[y] as i8+ yline as i8) >= 0 {
+                                    if self.screen[self.v[x] as usize + xpix][self.v[y] as usize + yline] == 1 {self.v[0xF] = 1}
+                                    self.screen[self.v[x] as usize + xpix][self.v[y] as usize + yline] ^=1; 
+                                }
+                            }
+                        }
+                        let data = self.memory[self.i as usize + yline * 2 + 1];
+                        for xpix in 0..8 {
+                            if data & (0x80 >> xpix) != 0 {
+                                if (self.v[x] as usize + xpix + 8) < 128 
+                                    && (self.v[y] as usize + yline) < 64 
+                                    && (self.v[x] as i8 + xpix as i8 + 8) >= 0 
+                                    && (self.v[y] as i8+ yline as i8) >= 0 {
+                                    if self.screen[self.v[x] as usize + xpix + 8][self.v[y] as usize + yline] == 1 {self.v[0xF] = 1}
+                                    self.screen[self.v[x] as usize + xpix + 8][self.v[y] as usize + yline] ^=1; 
+                                }
+                            }
+                        }
+                    }
+                }
+                else {
+                    for yline in 0..num {
+                        let data = self.memory[self.i as usize + yline];
+                        for xpix in 0..8 {
+                            if data & (0x80 >> xpix) != 0 {
+                                if (self.v[x] as usize + xpix < 128) 
+                                && (self.v[y] as usize + yline < 64) 
+                                && (self.v[x] as isize + xpix as isize >= 0) 
+                                && (self.v[y] as isize + yline as isize >= 0) {
+                                    if self.screen[self.v[x] as usize + xpix][self.v[y] as usize + yline] == 1 {self.v[0xF] = 1;}
+                                    self.screen[self.v[x] as usize + xpix][self.v[y] as usize + yline] ^= 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+        }
     }
 }
 
 impl Chip8Cpu
 {
-    pub fn load_game(path: String)
+    #![allow(dead_code)]
+    pub fn load_game(&mut self, path: String) -> bool
     {
-        // let mut file = File::open("foo.txt")?;
+        let file = File::open(path);
+        if file.is_err() {
+            return false;
+        }
+
+        let mut buf = String::new();
+        file.unwrap().read_to_string(&mut buf).unwrap();
+        for i in 0..buf.len() {
+            self.memory[0x200 + i] = buf.as_bytes()[i];
+        }
+        true
     }
 }
