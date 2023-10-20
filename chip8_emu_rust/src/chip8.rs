@@ -208,7 +208,7 @@ impl Chip8Cpu
             // Dxyn - DRW Vx, Vy, nibble
             0xD000 => self.draw_sprite(
                 ((opcode & 0x0F00) >> 8) as usize, 
-                ((opcode & 0x0F00) >> 4) as usize, 
+                ((opcode & 0x00F0) >> 4) as usize, 
                 (opcode & 0x000F) as usize),
             0xE000 => {
                 match opcode & 0x00FF {
@@ -363,10 +363,10 @@ impl Chip8Cpu
             return false;
         }
 
-        let mut buf = String::new();
-        file.unwrap().read_to_string(&mut buf).unwrap();
+        let mut buf: Vec<u8> = vec![];
+        file.unwrap().read_to_end(&mut buf).unwrap();
         for i in 0..buf.len() {
-            self.memory[0x200 + i] = buf.as_bytes()[i];
+            self.memory[0x200 + i] = buf[i];
         }
         true
     }
