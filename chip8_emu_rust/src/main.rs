@@ -13,7 +13,7 @@ fn draw(canvas: &mut Canvas<Window>, cpu: &chip8::Chip8Cpu)
     for y in 0..64  {
         for x in 0..128 {
             if cpu.screen[x][y] == 1 {
-                canvas.fill_rect(Rect::new(x as i32 * 8, y as i32 * 8, 8, 8)).unwrap();
+                canvas.fill_rect(Rect::new(x as i32 * 8, y as i32 * 8, 8, 8), ).unwrap();
             }
         }
     } 
@@ -80,7 +80,7 @@ fn main() {
 
     let mut canvas: sdl2::render::Canvas<sdl2::video::Window> = window.into_canvas().build().unwrap();
 
-    canvas.set_draw_color(Color::RGB(128, 128, 128));
+    canvas.set_draw_color(Color::RGB(255, 255, 255));
     canvas.clear();
     canvas.present();
     let mut event_pump = sdl_context.event_pump().unwrap();
@@ -96,6 +96,7 @@ fn main() {
         }
         // The rest of the game loop goes here...
         cpu.execute_opcode();
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
         draw(&mut canvas, &cpu);
         
 

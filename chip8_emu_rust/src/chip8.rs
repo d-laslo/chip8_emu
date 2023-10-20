@@ -99,7 +99,7 @@ impl Chip8Cpu
                     // 00E0 - CLS
                     0x00E0 => self.screen = [[0; parameters::SCREEN_HEIGH]; parameters::SCREEN_WIDTH],
                     // 00EE - RET
-                    0x00EE => {self.sp -= 1; self.pc = self.stack[self.sp as usize];},
+                    0x00EE => { self.sp -= 1; self.pc = self.stack[self.sp as usize];},
                     // 00FB - SCR
                     0x00FB => {
                         for x in (parameters::SCREEN_WIDTH - 1)..=4 {
@@ -131,7 +131,7 @@ impl Chip8Cpu
             // 1nnn - JP addr
             0x1000 => self.pc = opcode & 0x0FFF,
             // 2nnn - CALL addr
-            0x2000 => {self.sp +=1; self.sp = self.pc; self.pc = opcode & 0x0FFF},
+            0x2000 => {self.stack[self.sp as usize] = self.pc; self.sp +=1; self.pc = opcode & 0x0FFF},
             // 3xkk - SE Vx, byte
             0x3000 => {
                 if self.v[(opcode & 0x0F00) as usize >> 0x8] == (opcode & 0x00FF) as u8 {
@@ -153,7 +153,9 @@ impl Chip8Cpu
             // 6xkk - LD Vx, byte
             0x6000 => self.v[(opcode & 0x0F00) as usize >> 0x8] = (opcode & 0x00FF) as u8,
             //7xkk - ADD Vx, byte
-            0x7000 => self.v[(opcode & 0x0F00) as usize >> 0x8] += (opcode & 0x00FF) as u8,
+            0x7000 => {
+                let t = self.v[(opcode & 0x0F00) as usize >> 0x8] as u16 + (opcode & 0x00FF);
+                self.v[(opcode & 0x0F00) as usize >> 0x8] = t as u8},
             0x8000 => {
                 match opcode & 0x000F {
                     // 8xy0 - LD Vx, Vy
@@ -172,9 +174,11 @@ impl Chip8Cpu
                     }
                     // 8xy5 - SUB Vx, Vy
                     0x5 => {
-                        if self.v[(opcode & 0x0F00) as usize >> 0x8] > self.v[(opcode & 0x00F0) as usize >> 0x4] 
-                        {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
-                        self.v[(opcode & 0x0F00) as usize >> 0x8] -= self.v[(opcode & 0x00F0) as usize >> 0x4];
+                        // if self.v[(opcode & 0x0F00) as usize >> 0x8] > self.v[(opcode & 0x00F0) as usize >> 0x4] 
+                        // {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
+                        let t = self.v[(opcode & 0x0F00) as usize >> 0x8].overflowing_sub(self.v[(opcode & 0x00F0) as usize >> 0x4]);
+                        if t.1 {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
+                        self.v[(opcode & 0x0F00) as usize >> 0x8] = t.0;
                     }
                     // 8xy6 - SHR Vx {, Vy}
                     0x6 => {
