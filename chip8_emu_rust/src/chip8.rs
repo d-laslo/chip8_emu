@@ -17,8 +17,8 @@ pub struct Chip8Cpu {
     flags: [u8; parameters::REGISTERS_COUNT],
     stack: [u16; parameters::STACK_SIZE],
     memory: [u8; parameters::MEMORY_SIZE],
-    screen: [[u8; parameters::SCREEN_HEIGH]; parameters::SCREEN_WIDTH],
-    key: [bool; parameters::KEYS_COUNT],
+    pub screen: [[u8; parameters::SCREEN_HEIGH]; parameters::SCREEN_WIDTH],
+    pub key: [bool; parameters::KEYS_COUNT],
 }
 
 impl Chip8Cpu{
@@ -72,7 +72,7 @@ impl Chip8Cpu {
 impl Chip8Cpu
 {
     #![allow(dead_code)]
-    fn execute_opcode(&mut self)
+    pub fn execute_opcode(&mut self)
     {
         let opcode : u16 = ((self.memory[self.pc as usize] as u16) << 8) ^ self.memory[(self.pc + 1) as usize] as u16;
         self.pc += 2;
@@ -369,5 +369,20 @@ impl Chip8Cpu
             self.memory[0x200 + i] = buf.as_bytes()[i];
         }
         true
+    }
+}
+
+impl Chip8Cpu
+{
+    #![allow(dead_code)]
+    pub fn decrease_timers(&mut self)
+    {
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
+
+        if self.sound_timer > 0 {
+            self.sound_timer -= 1;
+        }
     }
 }
