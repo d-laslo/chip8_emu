@@ -19,6 +19,11 @@ fn draw(canvas: &mut Canvas<Window>, cpu: &chip8::Chip8Cpu)
     for y in 0..64  {
         for x in 0..128 {
             if cpu.screen[x][y] == 1 {
+                canvas.set_draw_color(Color::RGB(0,0,0));
+                canvas.fill_rect(Rect::new(x as i32 * 8, y as i32 * 8, 8, 8), ).unwrap();
+            }
+            else {
+                canvas.set_draw_color(Color::RGB(255, 255, 255));
                 canvas.fill_rect(Rect::new(x as i32 * 8, y as i32 * 8, 8, 8), ).unwrap();
             }
         }
@@ -73,7 +78,7 @@ fn handle_key_down( keycode : &Keycode, cpu: &mut chip8::Chip8Cpu)
 
 fn main() {
     let mut cpu = chip8::Chip8Cpu::new();
-    cpu.load_game("/home/sovun/projects/chip8_emu/chip8_emu_rust/src/test_opcode.ch8".to_string());
+    cpu.load_game("/home/sovun/projects/chip8_emu/chip8_emu_rust/src/Tetris.ch8".to_string());
 
     let sdl_context: sdl2::Sdl = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -91,7 +96,7 @@ fn main() {
 
     let mut last_tick = get_timestamp();
 
-    let mut cycles_per_second = 0;
+    let mut cycles_per_second : i32;
     let mut opcode_count = 0;
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -117,6 +122,10 @@ fn main() {
         if get_timestamp() - last_tick >= 1000/60 {
             cpu.decrease_timers();
             last_tick = get_timestamp();
+
+            // canvas.set_draw_color(Color::RGB(255, 255, 255));
+            // canvas.clear();
+            // canvas.present();
 
             canvas.set_draw_color(Color::RGB(0, 0, 0));
             draw(&mut canvas, &cpu);
