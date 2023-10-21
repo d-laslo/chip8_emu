@@ -175,23 +175,21 @@ impl Chip8Cpu
                     0x3 => self.v[(opcode & 0x0F00) as usize >> 0x8] ^= self.v[(opcode & 0x00F0) as usize >> 0x4],
                     // 8xy4 - ADD Vx, Vy
                     0x4 => {
-                        let res = self.v[(opcode & 0x0F00) as usize >> 0x8] as u16 + self.v[(opcode & 0x00F0) as usize >> 0x4] as u16;
-                        if res > 0xFF {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
-                        self.v[(opcode & 0x0F00) as usize >> 0x8] = res as u8;
+                        let t = self.v[(opcode & 0x0F00) as usize >> 0x8].overflowing_add(self.v[(opcode & 0x00F0) as usize >> 0x4]);
+                        if t.1 {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
+                        self.v[(opcode & 0x0F00) as usize >> 0x8] = t.0;
                     }
                     // 8xy5 - SUB Vx, Vy
                     0x5 => {
-                        // if self.v[(opcode & 0x0F00) as usize >> 0x8] > self.v[(opcode & 0x00F0) as usize >> 0x4] 
-                        // {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
                         let t = self.v[(opcode & 0x0F00) as usize >> 0x8].overflowing_sub(self.v[(opcode & 0x00F0) as usize >> 0x4]);
                         if t.1 {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
                         self.v[(opcode & 0x0F00) as usize >> 0x8] = t.0;
                     }
                     // 8xy6 - SHR Vx {, Vy}
                     0x6 => {
-                        if (self.v[(opcode & 0x0F00) as usize >> 0x8] & 0x1) == 0x1 
-                        {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
-                        self.v[(opcode & 0x0F00) as usize >> 0x8] >>= 1;
+                        let t = self.v[(opcode & 0x0F00) as usize >> 0x8].overflowing_shr(1);
+                        if t.1 {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
+                        self.v[(opcode & 0x0F00) as usize >> 0x8] = t.0;
                     }
                     // 8xy7 - SUBN Vx, Vy
                     0x7 => {
@@ -201,9 +199,9 @@ impl Chip8Cpu
                     }
                     // 8xyE - SHL Vx {, Vy}
                     0xE => {
-                        if (self.v[(opcode & 0x0F00) as usize >> 0x8] & 0xF) == 0x8 
-                        {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
-                        self.v[(opcode & 0x0F00) as usize >> 0x8] <<= 1;
+                        let t = self.v[(opcode & 0x0F00) as usize >> 0x8].overflowing_shl(1);
+                        if t.1 {self.v[0xF] = 1;} else { self.v[0xF] = 0;}
+                        self.v[(opcode & 0x0F00) as usize >> 0x8] = t.0;
                     }
                     _=> error!("PC: {:X} Opcode:{:X}", self.pc, opcode),
                 }
