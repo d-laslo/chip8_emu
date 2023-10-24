@@ -1,5 +1,5 @@
 mod fonts;
-mod parameters;
+pub mod parameters;
 use log::{debug, error};
 use std::fs::File;
 use std::io::prelude::*;
