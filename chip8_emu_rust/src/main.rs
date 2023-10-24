@@ -1,5 +1,4 @@
 mod chip8;
-
 use sdl2::pixels::Color;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -30,7 +29,7 @@ fn draw(canvas: &mut Canvas<Window>, cpu: &chip8::Chip8Cpu)
     } 
 }
 
-fn handle_key_up( keycode : &Keycode, cpu: &mut chip8::Chip8Cpu)
+fn handle_key_down( keycode : &Keycode, cpu: &mut chip8::Chip8Cpu)
 {
     match keycode {
         Keycode::Num1 => cpu.key[0x1] = true,
@@ -53,7 +52,7 @@ fn handle_key_up( keycode : &Keycode, cpu: &mut chip8::Chip8Cpu)
     }
 }
 
-fn handle_key_down( keycode : &Keycode, cpu: &mut chip8::Chip8Cpu)
+fn handle_key_up( keycode : &Keycode, cpu: &mut chip8::Chip8Cpu)
 {
     match keycode {
         Keycode::Num1 => cpu.key[0x1] = false,
@@ -77,11 +76,12 @@ fn handle_key_down( keycode : &Keycode, cpu: &mut chip8::Chip8Cpu)
 }
 
 fn main() {
-    let mut cpu = chip8::Chip8Cpu::new();
-    cpu.load_game("/home/sovun/projects/chip8_emu/chip8_emu_rust/src/Tetris.ch8".to_string());
 
+
+    let mut cpu = chip8::Chip8Cpu::new();
+    cpu.load_game("/home/sovun/projects/chip8_emu/games/Tetris.ch8".to_string());
     let sdl_context: sdl2::Sdl = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
+    let  video_subsystem: sdl2::VideoSubsystem= sdl_context.video().unwrap();
     let window = video_subsystem.window("CHIP_EMU", 1024, 512)
         .position_centered()
         .build()
@@ -122,10 +122,6 @@ fn main() {
         if get_timestamp() - last_tick >= 1000/60 {
             cpu.decrease_timers();
             last_tick = get_timestamp();
-
-            // canvas.set_draw_color(Color::RGB(255, 255, 255));
-            // canvas.clear();
-            // canvas.present();
 
             canvas.set_draw_color(Color::RGB(0, 0, 0));
             draw(&mut canvas, &cpu);
