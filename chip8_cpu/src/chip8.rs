@@ -22,6 +22,7 @@ pub struct Chip8Cpu {
 }
 
 impl Chip8Cpu{
+    #![allow(dead_code)]
     pub fn new() -> Self {
         let mut cpu = Chip8Cpu{
             pc: parameters::START_PC, 
