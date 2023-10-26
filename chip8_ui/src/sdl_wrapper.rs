@@ -1,7 +1,6 @@
 use chip8_cpu::chip8::Chip8Cpu;
 use chip8_cpu::chip8::parameters::{SCREEN_WIDTH, SCREEN_HEIGH};
 use sdl2::pixels::Color;
-use sdl2::Sdl;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::render::Canvas;
@@ -9,14 +8,9 @@ use sdl2::video::Window;
 use sdl2::rect::Rect;
 use chrono::Local;
 
-
-
 pub struct Wrapper
 {
     cpu: Chip8Cpu,
-    sdl_context: Sdl,
-    //video_subsystem: VideoSubsystem,
-    canvas:Canvas<Window>,
     scale: u32,
     background_color: (u8, u8, u8),
     object_color: (u8, u8, u8),
@@ -30,38 +24,12 @@ impl Wrapper
         if background_color == None { background_color = Some((255, 255, 255));}
         if object_color == None { object_color = Some((0, 0, 0));}
 
-        let sdl_context = sdl2::init().unwrap();
-        //let video_subsystem = sdl_context.video().unwrap();
-        // let window = video_subsystem.window("CHIP_EMU", (SCREEN_WIDTH * scale.unwrap() as usize) as u32, (SCREEN_HEIGH * scale.unwrap() as usize) as u32)
-        //     .position_centered()
-        //     .build()
-        //     .unwrap();
-        let canvas = sdl_context
-            .video()
-            .unwrap()
-            .window("CHIP_EMU", (SCREEN_WIDTH * scale.unwrap() as usize) as u32, (SCREEN_HEIGH * scale.unwrap() as usize) as u32)
-            .position_centered()
-            .build()
-            .unwrap()
-            .into_canvas()
-            .build().unwrap();
-
-        let mut wrapper = Wrapper {
+        let wrapper = Wrapper {
             cpu: Chip8Cpu::new(),
-            sdl_context: sdl_context,
-            //video_subsystem: video_subsystem,
-            canvas : canvas,
             scale : scale.unwrap() as u32,
             background_color : background_color.unwrap(),
             object_color : object_color.unwrap(),
         };
-
-        wrapper.canvas.set_draw_color(Color::RGB(
-            wrapper.background_color.0, 
-            wrapper.background_color.1,
-            wrapper.background_color.2));
-        wrapper.canvas.clear();
-        wrapper.canvas.present();
         wrapper
     }
 }
@@ -75,9 +43,28 @@ impl Wrapper
 
     pub fn run(&mut self, path: String)
     {
+        let sdl_context = sdl2::init().unwrap();
+        let mut canvas: Canvas<Window> = sdl_context
+            .video()
+            .unwrap()
+            .window("CHIP_EMU", (SCREEN_WIDTH * self.scale as usize) as u32, (SCREEN_HEIGH * self.scale as usize) as u32)
+            .position_centered()
+            .build()
+            .unwrap()
+            .into_canvas()
+            .build().unwrap();
+
+        canvas.set_draw_color(Color::RGB(
+            self.background_color.0, 
+            self.background_color.1,
+            self.background_color.2));
+        canvas.clear();
+        canvas.present();
+
+
         self.cpu.init();
         self.cpu.load_game(path);
-        let mut event_pump = self.sdl_context.event_pump().unwrap();
+        let mut event_pump = sdl_context.event_pump().unwrap();
         let mut last_tick = self.get_timestamp();
 
         let mut cycles_per_second : i32;
@@ -106,9 +93,9 @@ impl Wrapper
                 self.cpu.decrease_timers();
                 last_tick = self.get_timestamp();
 
-                self.canvas.set_draw_color(Color::RGB(0, 0, 0));
-                self.draw();
-                self.canvas.present();
+                canvas.set_draw_color(Color::RGB(0, 0, 0));
+                self.draw(&mut canvas);
+                canvas.present();
 
                 opcode_count = 0;
             }
@@ -118,23 +105,23 @@ impl Wrapper
 
 impl Wrapper
 {
-    fn draw(&mut self)
+    fn draw(&mut self, canvas: &mut Canvas<Window>)
     {
         for y in 0..64  {
             for x in 0..128 {
                 if self.cpu.screen[x][y] == 1 {
-                    self.canvas.set_draw_color(Color::RGB(
+                    canvas.set_draw_color(Color::RGB(
                         self.object_color.0, 
                         self.object_color.1,
                         self.object_color.2));
-                    self.canvas.fill_rect(Rect::new(x as i32 * self.scale as i32, y as i32 * self.scale as i32, self.scale, self.scale), ).unwrap();
+                    canvas.fill_rect(Rect::new(x as i32 * self.scale as i32, y as i32 * self.scale as i32, self.scale, self.scale), ).unwrap();
                 }
                 else {
-                    self.canvas.set_draw_color(Color::RGB(
+                    canvas.set_draw_color(Color::RGB(
                         self.background_color.0, 
                         self.background_color.1,
                         self.background_color.2));
-                    self.canvas.fill_rect(Rect::new(x as i32 * self.scale as i32, y as i32 * self.scale as i32, self.scale, self.scale), ).unwrap();
+                    canvas.fill_rect(Rect::new(x as i32 * self.scale as i32, y as i32 * self.scale as i32, self.scale, self.scale), ).unwrap();
                 }
             }
         } 
